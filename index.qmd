@@ -1,0 +1,236 @@
+---
+title: "Reproducible environments for data science with {rix}"
+author: "Bruno Rodrigues"
+format:
+  revealjs:
+    embed-resources: true
+    slide-number: true
+    theme: solarized
+    incremental: true
+  pptx:
+    freeze: true
+execute:
+  echo: true
+---
+
+## Intro: Who am I
+
+Bruno Rodrigues, Head of the Statistics Department at the Ministry of Research and Higher Education in Luxembourg
+
+## Intro: Contents
+
+Slides available online:
+
+[https://b-rodrigues.github.io/repro_ulisboa](https://b-rodrigues.github.io/repro_ulisboa)
+
+Code available here:
+
+[https://github.com/b-rodrigues/repro_ulisboa](https://github.com/b-rodrigues/repro_ulisboa)
+
+## What I will talk about
+
+The puzzle you know:
+
+![](images/repro_puzzle.png){fig-align="center"}
+
+## What I will talk about
+
+The puzzle with Nix:
+
+![](images/repro_puzzle_nix.png){fig-align="center"}
+
+## Available solutions for R
+
+- `{renv}` or `{groundhog}`: easy to use, but:
+  - Doesn’t save the version of R
+  - Installing older packages can fail (system dependencies)
+
+- Docker goes further:
+  - Manages R *and* system dependencies
+  - Containers can run anywhere
+- But:
+  - Not inherently reproducible
+
+## The Nix package manager (1/2)
+
+Package manager: a tool to install and manage *packages*
+
+Package: any software (not just R packages)
+
+A popular package manager:
+
+. . .
+
+![Google Play Store](images/play_store.png)
+
+## The Nix package manager (2/2)
+
+- To ensure reproducibility: R, R packages, and other dependencies
+  must be managed explicitly
+- Nix is a package manager truly focused on reproducible builds
+- Nix manages everything using a single text file (called a Nix expression)!
+- These expressions *always* produce the exact same result
+
+## rix: reproducible development environments with Nix (1/5)
+
+- `{rix}` ([website](https://docs.ropensci.org/rix/)) simplifies writing
+  Nix expressions!
+- Just use the provided `rix()` function:
+
+. . .
+
+```{r, eval = FALSE}
+library(rix)
+
+rix(date = "2025-06-13",
+    r_pkgs = c("dplyr", "ggplot2"),
+    system_pkgs = NULL,
+    git_pkgs = NULL,
+    tex_pkgs = NULL,
+    ide = "code",
+    project_path = ".")
+```
+
+## rix: reproducible development environments with Nix (2/5)
+
+- `renv.lock` files can also serve as a starting point:
+
+. . .
+
+```{r, eval = FALSE}
+library(rix)
+
+renv2nix(
+  renv_lock_path = "path/to/original/renv_project/renv.lock",
+  project_path = "path/to/rix_project",
+  override_r_ver = "4.4.1" # <- optional
+)
+```
+
+## rix: reproducible development environments with Nix (3/5)
+
+- List the R version and required packages
+- Optional:
+    * system packages, GitHub packages, or LaTeX packages
+    * an IDE (Rstudio, Radian, VS Code or "other")
+    * a Python version and Python packages to include
+    * a Julia version and Julia packages to include
+
+## rix: reproducible development environments with Nix (4/5)
+
+- `rix::rix()` generates a `default.nix` file
+- Build the expressions with `nix-build` (in terminal) or
+  `rix::nix_build()` from R
+- Enter the development environment with `nix-shell`
+- Expressions can be generated even without Nix installed (with some
+  limitations)
+
+## rix: reproducible development environments with Nix (5/5)
+
+- Can install specific package versions (write `"dplyr@1.0.0"`)
+- Can install packages hosted on GitHub
+- Many vignettes to get started! [See here](https://docs.ropensci.org/rix/articles/)
+
+## Demonstration
+
+- Basics: `scripts/nix_expressions/01_rix_intro/`
+- Native VS Code/Positron on Windows: `scripts/nix_expressions/02_native_vscode_example/`
+- Nix and `{targets}`: `scripts/nix_expressions/03_nix_targets_pipeline`
+- Nix and Docker: `scripts/nix_expressions/04_docker/`
+- Nix and `{shiny}`: `scripts/nix_expressions/05_shiny`
+- GitHub Actions: [see here](https://github.com/b-rodrigues/rix_paper/tree/master)
+
+## Polyglot pipelines with `{rixpress}`
+
+- `{rixpress}` lets you chain processing steps in both R **and** Python
+- Uses `{rix}` to create a reproducible (Nix-based) execution environment
+  for the pipeline
+- Each pipeline step is a **Nix derivation**
+- Data transfer: automatic via `reticulate` or universal formats (JSON)
+
+## An example mixed pipeline
+
+```r
+list(
+  rxp_py_file(…),    # Read a CSV with Python
+  rxp_py(…),         # Filter with Polars
+  rxp_py2r(…),       # Python → R transfer
+  rxp_r(…),          # Transform in R
+  rxp_r2py(…),       # R → Python transfer
+  rxp_py(…),         # Another Python step
+  rxp_py2r(…),       # Back to R
+  rxp_r(…)           # Final step
+) |> rixpress()
+```
+
+- Each step is named, typed (`py`, `r`, `r2py`, etc.)
+- You can add files (`functions.R`, images…)
+
+## Transfer with JSON (or other universal format)
+
+- Advantage: avoids using `reticulate`
+- Add a Python serialization function:
+
+. . .
+
+```python
+def serialize_to_json(pl_df, path):
+    with open(path, 'w') as f:
+        f.write(pl_df.write_json())
+```
+
+- And on the R side:
+
+. . .
+
+```r
+rxp_r(
+  name = "x",
+  expr = my_fun(data),
+  unserialize_function = "jsonlite::fromJSON"
+)
+```
+
+## Document generation (Quarto or Rmd)
+
+- Easily integrate pipeline output into a `.qmd`:
+
+. . .
+
+````qmd
+```r
+rixpress::rxp_read("mtcars_head")
+```
+````
+
+. . .
+
+- All created objects can be dynamically loaded in the document
+- You can pass additional files (content.qmd, images...)
+
+## Interactive demo
+
+See `scripts/rixpress_demo`
+
+## To learn more
+
+- [Repository GitHub](https://github.com/b-rodrigues/rixpress)
+- [Website](https://b-rodrigues.github.io/rixpress/)
+- [rixpress examples repository](https://github.com/b-rodrigues/rixpress_demos)
+
+## Fin
+
+Contact me if you have questions:
+
+- bruno@brodrigues.co
+- Twitter : [@brodriguesco](https://x.com/brodriguesco)
+- Mastodon : [@brodriguesco@fosstodon.org](https://fosstodon.org/@brodriguesco)
+- Blog : [www.brodrigues.co](https://brodrigues.co/)
+- Livre : [www.raps-with-r.dev](https://raps-with-r.dev/)
+- rix : [https://docs.ropensci.org/rix](https://docs.ropensci.org/rix)
+- rixpress : [https://b-rodrigues.github.io/rixpress/](https://b-rodrigues.github.io/rixpress/)
+
+. . .
+
+Obrigado!
+
