@@ -1,2 +1,1 @@
-Repository avec le contenu de ma présentation pour le réseau de la recherche
-reproductible
+Repository for my webinar at CEAUL (Centro de Estatística e Aplicações da Universidade de Lisboa) on the 18th of June 2025.
