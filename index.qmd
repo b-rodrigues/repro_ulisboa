@@ -135,6 +135,8 @@ renv2nix(
 
 - Test tools, or bootstrap an environment using
 
+. . .
+
 ```bash
 nix-shell -p R rPackages.rix
 ```
