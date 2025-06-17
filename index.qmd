@@ -131,6 +131,14 @@ renv2nix(
 - Can install packages hosted on GitHub
 - Many vignettes to get started! [See here](https://docs.ropensci.org/rix/articles/)
 
+## Temporary shells
+
+- Test tools, or bootstrap an environment using
+
+```bash
+nix-shell -p R rPackages.rix
+```
+
 ## Demonstration
 
 - Basics: `scripts/nix_expressions/01_rix_intro/`
